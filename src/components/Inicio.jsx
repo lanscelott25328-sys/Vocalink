@@ -1,17 +1,33 @@
-import AnalisisAudio from "./AnalisisAudio";
 import { useEffect, useState } from "react";
 import {
-  doc,
-  getDoc,
   collection,
-  query,
-  where,
-  orderBy,
-  onSnapshot,
   addDoc,
   serverTimestamp,
+  query,
+  orderBy,
+  onSnapshot,
+  limit,
 } from "firebase/firestore";
 import { auth, db } from "../firebase";
+import { obtenerUltimaPrediccion } from "../services/modeloApi";
+
+function SectionCard({ children, style }) {
+  return (
+    <div
+      style={{
+        background: "#FFFFFF",
+        border: "1px solid #EDE3F8",
+        borderRadius: "24px",
+        padding: "18px",
+        boxShadow: "0 8px 24px rgba(155, 132, 192, 0.08)",
+        marginBottom: "16px",
+        ...style,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
 
 function WaveLogo() {
   return (
@@ -32,460 +48,375 @@ function WaveLogo() {
   );
 }
 
-function SectionCard({ children, style }) {
-  return (
-    <div
-      style={{
-        background: "#FFFFFF",
-        border: "1px solid #EDE3F8",
-        borderRadius: "24px",
-        padding: "18px",
-        boxShadow: "0 8px 24px rgba(155, 132, 192, 0.08)",
-        marginBottom: "16px",
-        ...style,
-      }}
-    >
-      {children}
-    </div>
-  );
+function clasificarEmocion(emotion = "") {
+  const e = emotion.toLowerCase();
+
+  if (["happy", "feliz", "calm", "calma", "neutral"].includes(e)) {
+    return {
+      categoria: e === "neutral" ? "Neutro" : "Positivo",
+      emoji: e === "neutral" ? "🌿" : "😊",
+      mensaje: e === "neutral" ? "se encuentra estable" : "podría estar tranquilo",
+      color: "#3FB6A8",
+    };
+  }
+
+  if (["sad", "triste", "fear", "miedo", "angry", "enojo", "disgust"].includes(e)) {
+    return {
+      categoria: "Alerta",
+      emoji: "⚠️",
+      mensaje: "podría necesitar acompañamiento",
+      color: "#F4C14E",
+    };
+  }
+
+  return {
+    categoria: "En análisis",
+    emoji: "🎧",
+    mensaje: "está siendo monitoreado",
+    color: "#A48FD6",
+  };
 }
 
-function SmallStatCard({ icon, title, value, subtitle }) {
+function EstadoActual({ nombreNino, prediccion, conectado }) {
+  const info = clasificarEmocion(prediccion?.emotion);
+
   return (
-    <div
+    <SectionCard
       style={{
-        flex: 1,
-        minWidth: "0",
-        background: "#FFFFFF",
-        border: "1px solid #EDE3F8",
-        borderRadius: "20px",
-        padding: "14px",
-        boxShadow: "0 8px 22px rgba(155, 132, 192, 0.07)",
+        background: "linear-gradient(135deg, #F8F4FF 0%, #EEF5FF 100%)",
       }}
     >
-      <div
-        style={{
-          width: "34px",
-          height: "34px",
-          borderRadius: "50%",
-          background: "#F1ECFF",
-          color: "#7E6FE8",
-          display: "flex",
-          justifyContent: "center",
-          alignItems: "center",
-          fontSize: "17px",
-          marginBottom: "12px",
-        }}
-      >
-        {icon}
-      </div>
+      <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+        <div>
+          <div style={{ fontSize: 13, color: "#6F7897", fontWeight: 700 }}>
+            Estado actual
+          </div>
 
-      <div
-        style={{
-          fontSize: "12px",
-          color: "#59607C",
-          fontWeight: "600",
-          marginBottom: "6px",
-        }}
-      >
-        {title}
-      </div>
-
-      <div
-        style={{
-          fontSize: "24px",
-          color: "#252B4F",
-          fontWeight: "800",
-          lineHeight: "1",
-        }}
-      >
-        {value}
-      </div>
-
-      {subtitle && (
-        <div style={{ fontSize: "11px", color: "#7C839F", marginTop: "5px" }}>
-          {subtitle}
-        </div>
-      )}
-    </div>
-  );
-}
-
-function CategoryCard({ emoji, title, percent, color, textColor }) {
-  return (
-    <div
-      style={{
-        flex: 1,
-        background: color,
-        borderRadius: "18px",
-        padding: "14px 8px",
-        textAlign: "center",
-        minHeight: "112px",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        border: "1px solid rgba(255,255,255,0.8)",
-      }}
-    >
-      <div style={{ fontSize: "28px", marginBottom: "8px" }}>{emoji}</div>
-
-      <div
-        style={{
-          fontSize: "13px",
-          fontWeight: "800",
-          color: textColor,
-          marginBottom: "6px",
-        }}
-      >
-        {title}
-      </div>
-
-      <div style={{ fontSize: "15px", fontWeight: "800", color: textColor }}>
-        {percent}%
-      </div>
-    </div>
-  );
-}
-
-function DistributionBar({ label, percent, color }) {
-  return (
-    <div style={{ marginBottom: "13px" }}>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginBottom: "6px",
-          fontSize: "12px",
-          color: "#59607C",
-          fontWeight: "600",
-        }}
-      >
-        <span>{label}</span>
-        <span>{percent}%</span>
-      </div>
-
-      <div
-        style={{
-          height: "10px",
-          background: "#F1F1FA",
-          borderRadius: "999px",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            width: `${percent}%`,
-            height: "100%",
-            background: color,
-            borderRadius: "999px",
-          }}
-        />
-      </div>
-    </div>
-  );
-}
-
-function RecentItem({ time, categoria, emocion, emoji, actividad }) {
-  const color =
-    categoria === "Positivo"
-      ? "#3FB6A8"
-      : categoria === "Neutro"
-      ? "#A48FD6"
-      : "#F4C14E";
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "flex-start",
-        gap: "12px",
-        padding: "12px 0",
-        borderBottom: "1px solid #EFEAF8",
-      }}
-    >
-      <div
-        style={{
-          width: "9px",
-          height: "9px",
-          borderRadius: "50%",
-          background: color,
-          flexShrink: 0,
-          marginTop: "5px",
-        }}
-      />
-
-      <div
-        style={{
-          fontSize: "13px",
-          color: "#7A819E",
-          width: "58px",
-          flexShrink: 0,
-          marginTop: "1px",
-        }}
-      >
-        {time}
-      </div>
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            fontSize: "14px",
-            color: "#252B4F",
-            fontWeight: "800",
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-          }}
-        >
-          {emoji} {categoria}
-        </div>
-
-        <div style={{ fontSize: "12px", color: "#7A819E", marginTop: "2px" }}>
-          Emoción detectada: {emocion}
-        </div>
-
-        {actividad && (
-          <div
+          <h2
             style={{
-              fontSize: "12px",
-              color: "#5C4B8A",
-              marginTop: "5px",
-              background: "#F5F0FF",
-              border: "1px solid #ECE3FF",
-              padding: "6px 8px",
-              borderRadius: "12px",
-              lineHeight: "1.35",
+              margin: "8px 0 6px",
+              color: "#252B4F",
+              fontSize: 24,
+              lineHeight: 1.1,
             }}
           >
-            📍 Actividad registrada: {actividad}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
+            {nombreNino} {info.mensaje}
+          </h2>
 
-function AnalysisBox() {
-  return (
-    <div
-      style={{
-        background: "linear-gradient(180deg, #FBF8FE 0%, #F7F1FC 100%)",
-        border: "1px solid #EEE3F8",
-        borderRadius: "20px",
-        padding: "18px",
-      }}
-    >
+          <p
+            style={{
+              margin: 0,
+              color: "#6F7897",
+              fontSize: 13,
+              lineHeight: 1.45,
+            }}
+          >
+            Resultado generado automáticamente desde el audio recibido por el modelo.
+          </p>
+        </div>
+
+        <div
+          style={{
+            width: 62,
+            height: 62,
+            borderRadius: "50%",
+            background: "#FFFFFF",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: 30,
+            boxShadow: "0 10px 25px rgba(120, 100, 170, 0.14)",
+            flexShrink: 0,
+          }}
+        >
+          {info.emoji}
+        </div>
+      </div>
+
       <div
         style={{
-          fontSize: "13px",
-          color: "#7D7990",
-          marginBottom: "14px",
-          lineHeight: "1.5",
+          marginTop: 16,
+          display: "flex",
+          alignItems: "center",
+          gap: 8,
+          fontSize: 13,
+          color: conectado ? "#3FB6A8" : "#C47F2C",
+          fontWeight: 800,
         }}
       >
-        Sube un audio para analizar la categoría emocional detectada por el modelo.
+        <span
+          style={{
+            width: 9,
+            height: 9,
+            borderRadius: "50%",
+            background: conectado ? "#3FB6A8" : "#F4C14E",
+          }}
+        />
+        {conectado ? "Modelo conectado" : "Esperando predicción del modelo"}
       </div>
 
-      <AnalisisAudio />
-    </div>
+      {prediccion?.emotion && (
+        <div
+          style={{
+            marginTop: 14,
+            background: "#FFFFFF",
+            border: "1px solid #E9DFFC",
+            borderRadius: 18,
+            padding: 14,
+          }}
+        >
+          <div style={{ fontSize: 12, color: "#7A819E", fontWeight: 700 }}>
+            Última emoción detectada
+          </div>
+
+          <div
+            style={{
+              marginTop: 5,
+              display: "flex",
+              justifyContent: "space-between",
+              gap: 12,
+              alignItems: "center",
+            }}
+          >
+            <strong style={{ color: "#252B4F", fontSize: 18 }}>
+              {prediccion.emotion}
+            </strong>
+
+            {prediccion.confidence && (
+              <span
+                style={{
+                  fontSize: 12,
+                  color: "#7D73E6",
+                  fontWeight: 800,
+                  background: "#F1ECFF",
+                  padding: "6px 10px",
+                  borderRadius: 999,
+                }}
+              >
+                {prediccion.confidence}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
+    </SectionCard>
   );
 }
 
-function RegistroActividad({
+function ActividadActual({
   nombreNino,
   actividadTexto,
   setActividadTexto,
   lugarActividad,
   setLugarActividad,
-  guardandoActividad,
-  onGuardar,
   actividadActual,
-  formatearHora,
+  onGuardar,
+  guardando,
 }) {
   return (
-    <SectionCard
-      style={{
-        background: "linear-gradient(135deg, #FFFFFF 0%, #F8F4FF 100%)",
-      }}
-    >
-      <div
-        style={{
-          fontSize: "15px",
-          color: "#252B4F",
-          fontWeight: "900",
-          marginBottom: "6px",
-        }}
-      >
+    <SectionCard>
+      <h3 style={{ margin: "0 0 6px", color: "#252B4F", fontSize: 16 }}>
         Registrar actividad
-      </div>
+      </h3>
 
-      <div
-        style={{
-          fontSize: "13px",
-          color: "#6F7897",
-          lineHeight: "1.45",
-          marginBottom: "14px",
-        }}
-      >
-        Guarda qué está haciendo {nombreNino}. Así, si luego aparece una alerta
-        emocional, podrás revisar si la actividad pudo influir en el resultado.
-      </div>
+      <p style={{ margin: "0 0 14px", color: "#6F7897", fontSize: 13 }}>
+        Guarda qué está haciendo {nombreNino}. Así puedes relacionar el contexto
+        con la emoción detectada.
+      </p>
 
       {actividadActual && (
         <div
           style={{
             background: "#F1ECFF",
             border: "1px solid #E4D9FF",
-            borderRadius: "16px",
-            padding: "12px",
-            marginBottom: "14px",
+            borderRadius: 16,
+            padding: 12,
+            marginBottom: 14,
           }}
         >
-          <div
-            style={{
-              fontSize: "11px",
-              color: "#7D73E6",
-              fontWeight: "900",
-              textTransform: "uppercase",
-              letterSpacing: "0.8px",
-              marginBottom: "4px",
-            }}
-          >
-            Actividad actual
+          <div style={{ fontSize: 11, color: "#7D73E6", fontWeight: 900 }}>
+            ACTIVIDAD ACTUAL
           </div>
-
-          <div
-            style={{
-              fontSize: "14px",
-              color: "#252B4F",
-              fontWeight: "800",
-              lineHeight: "1.4",
-            }}
-          >
+          <div style={{ marginTop: 4, color: "#252B4F", fontWeight: 800 }}>
             {actividadActual.actividad}
           </div>
-
-          <div style={{ fontSize: "12px", color: "#7A819E", marginTop: "4px" }}>
-            {actividadActual.lugar && `Lugar: ${actividadActual.lugar} · `}
-            Desde las {formatearHora(actividadActual.fechaInicio)}
-          </div>
+          {actividadActual.lugar && (
+            <div style={{ fontSize: 12, color: "#7A819E", marginTop: 3 }}>
+              Lugar: {actividadActual.lugar}
+            </div>
+          )}
         </div>
       )}
 
       <input
         value={actividadTexto}
         onChange={(e) => setActividadTexto(e.target.value)}
-        placeholder={`Ej: ${nombreNino} está jugando en el parque`}
-        style={{
-          width: "100%",
-          border: "1px solid #E3D8F5",
-          borderRadius: "16px",
-          padding: "13px 14px",
-          fontSize: "14px",
-          color: "#252B4F",
-          outline: "none",
-          marginBottom: "10px",
-          background: "#FFFFFF",
-        }}
+        placeholder={`Ej: ${nombreNino} está jugando`}
+        style={inputStyle}
       />
 
       <input
         value={lugarActividad}
         onChange={(e) => setLugarActividad(e.target.value)}
-        placeholder="Lugar o contexto: parque, casa, colegio..."
-        style={{
-          width: "100%",
-          border: "1px solid #E3D8F5",
-          borderRadius: "16px",
-          padding: "13px 14px",
-          fontSize: "14px",
-          color: "#252B4F",
-          outline: "none",
-          marginBottom: "12px",
-          background: "#FFFFFF",
-        }}
+        placeholder="Lugar: casa, colegio, parque..."
+        style={inputStyle}
       />
 
       <button
         onClick={onGuardar}
-        disabled={guardandoActividad || actividadTexto.trim() === ""}
+        disabled={guardando}
         style={{
           width: "100%",
           border: "none",
-          borderRadius: "16px",
+          borderRadius: 16,
           padding: "13px 14px",
-          background:
-            guardandoActividad || actividadTexto.trim() === ""
-              ? "#D8D4EA"
-              : "linear-gradient(135deg, #B79CF7, #7FA8F8)",
+          background: "#7D73E6",
           color: "#FFFFFF",
-          fontWeight: "900",
-          fontSize: "14px",
-          cursor:
-            guardandoActividad || actividadTexto.trim() === ""
-              ? "not-allowed"
-              : "pointer",
-          boxShadow:
-            guardandoActividad || actividadTexto.trim() === ""
-              ? "none"
-              : "0 10px 22px rgba(126, 126, 230, 0.25)",
+          fontWeight: 900,
+          cursor: guardando ? "not-allowed" : "pointer",
+          opacity: guardando ? 0.7 : 1,
         }}
       >
-        {guardandoActividad ? "Guardando..." : "Guardar actividad con hora actual"}
+        {guardando ? "Guardando..." : "Guardar actividad"}
       </button>
     </SectionCard>
   );
 }
 
+function VocesRecientes({ registros }) {
+  return (
+    <SectionCard>
+      <h3 style={{ margin: "0 0 12px", color: "#252B4F", fontSize: 16 }}>
+        Voces recientes
+      </h3>
+
+      {registros.length === 0 ? (
+        <p style={{ margin: 0, color: "#7A819E", fontSize: 13 }}>
+          Todavía no hay predicciones registradas.
+        </p>
+      ) : (
+        registros.map((item) => {
+          const info = clasificarEmocion(item.emotion);
+
+          return (
+            <div
+              key={item.id}
+              style={{
+                display: "flex",
+                gap: 12,
+                padding: "12px 0",
+                borderBottom: "1px solid #EFEAF8",
+              }}
+            >
+              <div
+                style={{
+                  width: 9,
+                  height: 9,
+                  borderRadius: "50%",
+                  background: info.color,
+                  marginTop: 6,
+                }}
+              />
+
+              <div style={{ flex: 1 }}>
+                <div style={{ color: "#252B4F", fontWeight: 850, fontSize: 14 }}>
+                  {info.emoji} {info.categoria}
+                </div>
+
+                <div style={{ color: "#7A819E", fontSize: 12, marginTop: 2 }}>
+                  Emoción detectada: {item.emotion}
+                </div>
+
+                {item.actividad && (
+                  <div
+                    style={{
+                      marginTop: 6,
+                      background: "#F5F0FF",
+                      border: "1px solid #ECE3FF",
+                      borderRadius: 12,
+                      padding: "6px 8px",
+                      color: "#5C4B8A",
+                      fontSize: 12,
+                    }}
+                  >
+                    📍 {item.actividad}
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })
+      )}
+    </SectionCard>
+  );
+}
+
+const inputStyle = {
+  width: "100%",
+  border: "1px solid #E3D8F5",
+  borderRadius: 16,
+  padding: "13px 14px",
+  fontSize: 14,
+  color: "#252B4F",
+  outline: "none",
+  marginBottom: 10,
+  background: "#FFFFFF",
+  boxSizing: "border-box",
+};
+
 export default function Inicio() {
-  const [historial, setHistorial] = useState([]);
-  const [actividades, setActividades] = useState([]);
+  const [nombreNino] = useState("Mateo");
+  const [prediccionActual, setPrediccionActual] = useState(null);
+  const [ultimaFirma, setUltimaFirma] = useState("");
+  const [modeloConectado, setModeloConectado] = useState(false);
 
-  const [nombreNino, setNombreNino] = useState("Niño 1");
-  const [nombreCuidador, setNombreCuidador] = useState("");
-  const [cargandoPerfil, setCargandoPerfil] = useState(true);
-
+  const [registros, setRegistros] = useState([]);
   const [actividadTexto, setActividadTexto] = useState("");
   const [lugarActividad, setLugarActividad] = useState("");
+  const [actividadActual, setActividadActual] = useState(null);
   const [guardandoActividad, setGuardandoActividad] = useState(false);
 
   useEffect(() => {
-    async function cargarPerfil() {
+    const intervalo = setInterval(async () => {
       try {
-        const usuario = auth.currentUser;
+        const data = await obtenerUltimaPrediccion();
 
-        if (!usuario) {
-          setCargandoPerfil(false);
+        if (!data || !data.emotion) {
+          setModeloConectado(false);
           return;
         }
 
-        const docRef = doc(db, "usuarios", usuario.uid);
-        const docSnap = await getDoc(docRef);
+        setModeloConectado(true);
+        setPrediccionActual(data);
 
-        if (docSnap.exists()) {
-          const datos = docSnap.data();
-          if (datos.nombreNino) setNombreNino(datos.nombreNino);
-          if (datos.nombreCuidador) setNombreCuidador(datos.nombreCuidador);
+        const firma = `${data.emotion}-${data.confidence}-${data.timestamp || ""}`;
+
+        if (firma !== ultimaFirma) {
+          setUltimaFirma(firma);
+
+          await addDoc(collection(db, "predicciones"), {
+            uid: auth.currentUser?.uid || null,
+            emotion: data.emotion,
+            confidence: data.confidence || null,
+            categoria: clasificarEmocion(data.emotion).categoria,
+            actividad: actividadActual?.actividad || "",
+            lugar: actividadActual?.lugar || "",
+            createdAt: serverTimestamp(),
+          });
         }
       } catch (error) {
-        console.error("Error cargando perfil:", error);
-      } finally {
-        setCargandoPerfil(false);
+        setModeloConectado(false);
       }
-    }
+    }, 3000);
 
-    cargarPerfil();
-  }, []);
+    return () => clearInterval(intervalo);
+  }, [ultimaFirma, actividadActual]);
 
   useEffect(() => {
-    const usuario = auth.currentUser;
-
-    if (!usuario) return;
-
     const q = query(
-      collection(db, "historialAudios"),
-      where("uid", "==", usuario.uid),
-      orderBy("fecha", "desc")
+      collection(db, "predicciones"),
+      orderBy("createdAt", "desc"),
+      limit(5)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -494,721 +425,78 @@ export default function Inicio() {
         ...doc.data(),
       }));
 
-      setHistorial(datos);
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    const usuario = auth.currentUser;
-
-    if (!usuario) return;
-
-    const q = query(
-      collection(db, "actividades"),
-      where("uid", "==", usuario.uid),
-      orderBy("fechaInicio", "desc")
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const datos = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      setActividades(datos);
+      setRegistros(datos);
     });
 
     return () => unsubscribe();
   }, []);
 
   async function guardarActividad() {
-    const usuario = auth.currentUser;
-
-    if (!usuario || actividadTexto.trim() === "") return;
+    if (!actividadTexto.trim()) return;
 
     try {
       setGuardandoActividad(true);
 
-      await addDoc(collection(db, "actividades"), {
-        uid: usuario.uid,
-        nombreNino,
+      const nuevaActividad = {
         actividad: actividadTexto.trim(),
         lugar: lugarActividad.trim(),
-        fechaInicio: serverTimestamp(),
-        activa: true,
+      };
+
+      setActividadActual(nuevaActividad);
+
+      await addDoc(collection(db, "actividades"), {
+        uid: auth.currentUser?.uid || null,
+        ...nuevaActividad,
+        createdAt: serverTimestamp(),
       });
 
       setActividadTexto("");
       setLugarActividad("");
-    } catch (error) {
-      console.error("Error guardando actividad:", error);
-      alert("No se pudo guardar la actividad. Intenta de nuevo.");
     } finally {
       setGuardandoActividad(false);
     }
   }
 
-  const hoy = new Date();
-
-  const historialHoy = historial.filter((item) => {
-    if (!item.fecha) return false;
-
-    const fechaItem = item.fecha.toDate();
-
-    return (
-      fechaItem.getDate() === hoy.getDate() &&
-      fechaItem.getMonth() === hoy.getMonth() &&
-      fechaItem.getFullYear() === hoy.getFullYear()
-    );
-  });
-
-  const totalHoy = historialHoy.length;
-
-  const actividadesHoy = actividades.filter((item) => {
-    if (!item.fechaInicio) return false;
-
-    const fechaItem = item.fechaInicio.toDate();
-
-    return (
-      fechaItem.getDate() === hoy.getDate() &&
-      fechaItem.getMonth() === hoy.getMonth() &&
-      fechaItem.getFullYear() === hoy.getFullYear()
-    );
-  });
-
-  const actividadActual = actividadesHoy.length > 0 ? actividadesHoy[0] : null;
-
-  const normalizarEmocion = (emocion) => {
-    return String(emocion || "")
-      .toLowerCase()
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-  };
-
-  const obtenerCategoria = (emocion) => {
-    const e = normalizarEmocion(emocion);
-
-    if (["felicidad", "alegria", "happy", "calma", "calm"].includes(e)) {
-      return "Positivo";
-    }
-
-    if (["neutral", "neutro", "calmado"].includes(e)) {
-      return "Neutro";
-    }
-
-    if (
-      [
-        "tristeza",
-        "sad",
-        "enojo",
-        "ira",
-        "angry",
-        "miedo",
-        "fear",
-        "estres",
-        "stress",
-        "molestia",
-        "disgust",
-        "frustracion",
-        "frustration",
-      ].includes(e)
-    ) {
-      return "Alerta emocional";
-    }
-
-    return "Neutro";
-  };
-
-  const emojiPorCategoria = (categoria) => {
-    const mapa = {
-      Positivo: "😊",
-      Neutro: "😐",
-      "Alerta emocional": "😟",
-    };
-
-    return mapa[categoria] || "😐";
-  };
-
-  const mensajePorCategoria = (categoria) => {
-    const nombre = cargandoPerfil ? "El niño" : nombreNino;
-
-    if (categoria === "Positivo") {
-      return `${nombre} podría estar en un estado positivo. Buen momento para interacción tranquila, juego o acompañamiento.`;
-    }
-
-    if (categoria === "Alerta emocional") {
-      return `${nombre} podría requerir más atención. Observa el contexto, su postura y la actividad registrada en ese momento.`;
-    }
-
-    return `${nombre} podría estar en un estado neutro o estable. Continúa observando el contexto antes de tomar decisiones.`;
-  };
-
-  const contarPorCategoria = (categoria) => {
-    if (totalHoy === 0) return 0;
-
-    const cantidad = historialHoy.filter(
-      (item) => obtenerCategoria(item.emocion) === categoria
-    ).length;
-
-    return Math.round((cantidad / totalHoy) * 100);
-  };
-
-  const obtenerActividadParaAudio = (fechaAudioFirebase) => {
-    if (!fechaAudioFirebase) return null;
-
-    const fechaAudio = fechaAudioFirebase.toDate();
-
-    const actividadesAntes = actividades
-      .filter((actividad) => {
-        if (!actividad.fechaInicio) return false;
-        return actividad.fechaInicio.toDate() <= fechaAudio;
-      })
-      .sort((a, b) => b.fechaInicio.toDate() - a.fechaInicio.toDate());
-
-    return actividadesAntes.length > 0 ? actividadesAntes[0] : null;
-  };
-
-  const porcentajePositivo = contarPorCategoria("Positivo");
-  const porcentajeNeutro = contarPorCategoria("Neutro");
-  const porcentajeAlerta = contarPorCategoria("Alerta emocional");
-
-  const ultimoRegistro = historialHoy.length > 0 ? historialHoy[0] : null;
-
-  const categoriaActual = ultimoRegistro
-    ? obtenerCategoria(ultimoRegistro.emocion)
-    : "Sin registros";
-
-  const emocionActual = ultimoRegistro?.emocion || "Aún no hay registros";
-
-  const emojiActual =
-    categoriaActual === "Sin registros"
-      ? "🫧"
-      : emojiPorCategoria(categoriaActual);
-
-  const actividadUltimoRegistro = ultimoRegistro
-    ? obtenerActividadParaAudio(ultimoRegistro.fecha)
-    : null;
-
-  const categoriaFrecuente = (() => {
-    if (totalHoy === 0) return "Sin registros";
-
-    const categorias = [
-      { nombre: "Positivo", valor: porcentajePositivo },
-      { nombre: "Neutro", valor: porcentajeNeutro },
-      { nombre: "Alerta emocional", valor: porcentajeAlerta },
-    ];
-
-    return categorias.sort((a, b) => b.valor - a.valor)[0].nombre;
-  })();
-
-  const formatearHora = (fechaFirebase) => {
-    if (!fechaFirebase) return "--:--";
-
-    const fecha = fechaFirebase.toDate();
-
-    return fecha.toLocaleTimeString("es-CO", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-  };
-
   return (
-    <div
-      style={{
-        padding: "20px",
-        background: "linear-gradient(180deg, #FBF8FE 0%, #FFFFFF 100%)",
-      }}
-    >
-      {/* ENCABEZADO */}
-      <div
+    <div style={{ padding: "18px 16px 90px" }}>
+      <header
         style={{
           display: "flex",
-          justifyContent: "center",
           alignItems: "center",
-          gap: "12px",
-          marginBottom: "24px",
-          paddingTop: "4px",
+          gap: 12,
+          marginBottom: 18,
         }}
       >
         <WaveLogo />
 
-        <div
-          style={{
-            fontSize: "26px",
-            fontWeight: "800",
-            color: "#7D73E6",
-            letterSpacing: "0.5px",
-          }}
-        >
-          VocaLink
-        </div>
-      </div>
-
-      {/* SALUDO */}
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          gap: "12px",
-          alignItems: "center",
-          marginBottom: "18px",
-        }}
-      >
         <div>
-          <h1
-            style={{
-              fontSize: "25px",
-              color: "#252B4F",
-              margin: "0 0 6px",
-              fontWeight: "900",
-            }}
-          >
-            ¡Hola, {cargandoPerfil ? "cuidador" : nombreCuidador || "cuidador"}! 👋
+          <h1 style={{ margin: 0, color: "#252B4F", fontSize: 24 }}>
+            VocaLink
           </h1>
-
-          <p
-            style={{
-              margin: 0,
-              color: "#6F7897",
-              fontSize: "14px",
-              lineHeight: "1.4",
-            }}
-          >
-            Tu voz cuenta. Estamos aquí para ayudarte.
+          <p style={{ margin: 0, color: "#7A819E", fontSize: 13 }}>
+            Monitoreo emocional en tiempo real
           </p>
         </div>
+      </header>
 
-        <div
-          style={{
-            background: "#EAF7EC",
-            color: "#2E8A43",
-            padding: "10px 12px",
-            borderRadius: "18px",
-            fontSize: "12px",
-            fontWeight: "800",
-            whiteSpace: "nowrap",
-          }}
-        >
-          ✓ Activo
-        </div>
-      </div>
+      <EstadoActual
+        nombreNino={nombreNino}
+        prediccion={prediccionActual}
+        conectado={modeloConectado}
+      />
 
-      {/* MONITOREANDO */}
-      <SectionCard>
-        <div
-          style={{
-            fontSize: "11px",
-            color: "#8B8B98",
-            textTransform: "uppercase",
-            letterSpacing: "1px",
-            marginBottom: "8px",
-            fontWeight: "800",
-            textAlign: "center",
-          }}
-        >
-          Monitoreando
-        </div>
-
-        <div
-          style={{
-            fontSize: "20px",
-            fontWeight: "900",
-            color: "#252B4F",
-            textAlign: "center",
-          }}
-        >
-          {cargandoPerfil ? "Cargando..." : nombreNino}
-        </div>
-
-        {nombreCuidador && !cargandoPerfil && (
-          <div
-            style={{
-              fontSize: "12px",
-              color: "#6F6F7B",
-              marginTop: "5px",
-              textAlign: "center",
-            }}
-          >
-            Cuidador: {nombreCuidador}
-          </div>
-        )}
-      </SectionCard>
-
-      {/* REGISTRAR ACTIVIDAD */}
-      <RegistroActividad
-        nombreNino={cargandoPerfil ? "el niño" : nombreNino}
+      <ActividadActual
+        nombreNino={nombreNino}
         actividadTexto={actividadTexto}
         setActividadTexto={setActividadTexto}
         lugarActividad={lugarActividad}
         setLugarActividad={setLugarActividad}
-        guardandoActividad={guardandoActividad}
-        onGuardar={guardarActividad}
         actividadActual={actividadActual}
-        formatearHora={formatearHora}
+        onGuardar={guardarActividad}
+        guardando={guardandoActividad}
       />
 
-      {/* RESULTADO PRINCIPAL */}
-      <SectionCard>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "18px",
-            gap: "10px",
-          }}
-        >
-          <div
-            style={{
-              color: "#7D73E6",
-              fontWeight: "900",
-              fontSize: "15px",
-            }}
-          >
-            ▌ Categoría detectada
-          </div>
-
-          <div
-            style={{
-              fontSize: "11px",
-              color: "#8B8B98",
-              background: "#F8F5FF",
-              border: "1px solid #EFE8FF",
-              padding: "6px 10px",
-              borderRadius: "999px",
-              whiteSpace: "nowrap",
-            }}
-          >
-            Último registro
-          </div>
-        </div>
-
-        <div style={{ display: "flex", gap: "18px", alignItems: "center" }}>
-          <div
-            style={{
-              width: "112px",
-              height: "112px",
-              borderRadius: "50%",
-              background: "#F1ECFF",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              fontSize: "56px",
-              flexShrink: 0,
-            }}
-          >
-            {emojiActual}
-          </div>
-
-          <div>
-            <div
-              style={{
-                fontSize: "28px",
-                fontWeight: "900",
-                color: "#252B4F",
-                marginBottom: "8px",
-              }}
-            >
-              {categoriaActual}
-            </div>
-
-            <div
-              style={{
-                display: "inline-block",
-                background:
-                  categoriaActual === "Alerta emocional"
-                    ? "#FFF2CF"
-                    : categoriaActual === "Positivo"
-                    ? "#E4F6EF"
-                    : "#F1ECFF",
-                color:
-                  categoriaActual === "Alerta emocional"
-                    ? "#9A6A00"
-                    : categoriaActual === "Positivo"
-                    ? "#2E8A43"
-                    : "#6F62C9",
-                padding: "5px 10px",
-                borderRadius: "999px",
-                fontSize: "12px",
-                fontWeight: "800",
-                marginBottom: "10px",
-              }}
-            >
-              {emocionActual}
-            </div>
-
-            <p
-              style={{
-                margin: 0,
-                color: "#4F5775",
-                fontSize: "14px",
-                lineHeight: "1.45",
-              }}
-            >
-              {categoriaActual === "Sin registros"
-                ? "Cuando analices un audio, aquí aparecerá la categoría emocional detectada."
-                : mensajePorCategoria(categoriaActual)}
-            </p>
-          </div>
-        </div>
-
-        {actividadUltimoRegistro && (
-          <div
-            style={{
-              marginTop: "16px",
-              background: "#F5F0FF",
-              border: "1px solid #E6DCFF",
-              color: "#5C4B8A",
-              borderRadius: "16px",
-              padding: "12px",
-              fontSize: "13px",
-              lineHeight: "1.45",
-              fontWeight: "700",
-            }}
-          >
-            📍 Contexto registrado: {actividadUltimoRegistro.actividad}
-            {actividadUltimoRegistro.lugar
-              ? ` · ${actividadUltimoRegistro.lugar}`
-              : ""}
-          </div>
-        )}
-
-        <div
-          style={{
-            marginTop: "18px",
-            background: "#FFF9E8",
-            border: "1px solid #F6DFA3",
-            color: "#7B5A12",
-            borderRadius: "16px",
-            padding: "13px",
-            fontSize: "13px",
-            lineHeight: "1.45",
-            fontWeight: "600",
-          }}
-        >
-          💡 Este resultado es una orientación para apoyar la respuesta del
-          cuidador, no un diagnóstico médico.
-        </div>
-      </SectionCard>
-
-      {/* TARJETAS RESUMEN */}
-      <div style={{ display: "flex", gap: "12px", marginBottom: "16px" }}>
-        <SmallStatCard icon="📈" title="Análisis hoy" value={totalHoy} />
-
-        <SmallStatCard
-          icon="😊"
-          title="Categoría frecuente"
-          value={
-            categoriaFrecuente === "Sin registros"
-              ? "--"
-              : emojiPorCategoria(categoriaFrecuente)
-          }
-          subtitle={categoriaFrecuente}
-        />
-
-        <SmallStatCard
-          icon="🕘"
-          title="Último registro"
-          value={ultimoRegistro ? formatearHora(ultimoRegistro.fecha) : "--:--"}
-        />
-      </div>
-
-      {/* CATEGORÍAS */}
-      <SectionCard>
-        <div
-          style={{
-            fontSize: "15px",
-            color: "#252B4F",
-            fontWeight: "900",
-            marginBottom: "14px",
-          }}
-        >
-          Análisis emocional de hoy
-        </div>
-
-        <div style={{ display: "flex", gap: "10px", marginBottom: "18px" }}>
-          <CategoryCard
-            emoji="😊"
-            title="Positivo"
-            percent={porcentajePositivo}
-            color="#E4F6EF"
-            textColor="#2E8A43"
-          />
-
-          <CategoryCard
-            emoji="😐"
-            title="Neutro"
-            percent={porcentajeNeutro}
-            color="#F1ECFF"
-            textColor="#6F62C9"
-          />
-
-          <CategoryCard
-            emoji="😟"
-            title="Alerta"
-            percent={porcentajeAlerta}
-            color="#FFF2CF"
-            textColor="#9A6A00"
-          />
-        </div>
-
-        <DistributionBar
-          label="Positivo"
-          percent={porcentajePositivo}
-          color="#3FB6A8"
-        />
-
-        <DistributionBar
-          label="Neutro"
-          percent={porcentajeNeutro}
-          color="#A48FD6"
-        />
-
-        <DistributionBar
-          label="Alerta emocional"
-          percent={porcentajeAlerta}
-          color="#F4C14E"
-        />
-
-        <div style={{ color: "#8B8B98", fontSize: "12px", marginTop: "12px" }}>
-          Calculado con {totalHoy} registros del día.
-        </div>
-      </SectionCard>
-
-      {/* VOCES RECIENTES */}
-      <SectionCard>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            marginBottom: "8px",
-          }}
-        >
-          <div
-            style={{
-              fontSize: "15px",
-              color: "#252B4F",
-              fontWeight: "900",
-            }}
-          >
-            Voces recientes
-          </div>
-
-          <div
-            style={{
-              fontSize: "13px",
-              color: "#7D73E6",
-              fontWeight: "800",
-            }}
-          >
-            Ver todo →
-          </div>
-        </div>
-
-        {historial.length === 0 ? (
-          <div
-            style={{
-              fontSize: "14px",
-              color: "#7C7890",
-              textAlign: "center",
-              padding: "18px",
-            }}
-          >
-            Aún no hay voces registradas.
-          </div>
-        ) : (
-          historial.slice(0, 4).map((item) => {
-            const categoria = obtenerCategoria(item.emocion);
-            const actividadAsociada = obtenerActividadParaAudio(item.fecha);
-
-            return (
-              <RecentItem
-                key={item.id}
-                time={formatearHora(item.fecha)}
-                categoria={categoria}
-                emocion={item.emocion}
-                emoji={emojiPorCategoria(categoria)}
-                actividad={
-                  actividadAsociada
-                    ? `${actividadAsociada.actividad}${
-                        actividadAsociada.lugar
-                          ? ` · ${actividadAsociada.lugar}`
-                          : ""
-                      }`
-                    : ""
-                }
-              />
-            );
-          })
-        )}
-      </SectionCard>
-
-      {/* CONSEJO */}
-      <SectionCard
-        style={{
-          background: "linear-gradient(135deg, #F7F1FF 0%, #FFFFFF 100%)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <div
-            style={{
-              width: "52px",
-              height: "52px",
-              borderRadius: "50%",
-              background: "#F1ECFF",
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              fontSize: "25px",
-              flexShrink: 0,
-            }}
-          >
-            ✨
-          </div>
-
-          <div>
-            <div
-              style={{
-                color: "#7D73E6",
-                fontWeight: "900",
-                fontSize: "15px",
-                marginBottom: "5px",
-              }}
-            >
-              Consejo del día
-            </div>
-
-            <div
-              style={{
-                color: "#6F7897",
-                fontSize: "14px",
-                lineHeight: "1.45",
-              }}
-            >
-              Pequeños momentos de calma pueden hacer una gran diferencia. 🌿
-            </div>
-          </div>
-        </div>
-      </SectionCard>
-
-      {/* ANALIZAR AUDIO */}
-      <SectionCard>
-        <div
-          style={{
-            fontSize: "15px",
-            color: "#252B4F",
-            fontWeight: "900",
-            marginBottom: "12px",
-          }}
-        >
-          Analizar audio
-        </div>
-
-        <AnalysisBox />
-      </SectionCard>
+      <VocesRecientes registros={registros} />
     </div>
   );
 }

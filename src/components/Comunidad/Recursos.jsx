@@ -1,12 +1,13 @@
 import { useState } from "react";
 
-import categorias from "./datos/categorias";
-import recursosData from "./datos/recursosData";
+import categorias from "./Recursos/datos/categorias";
+import recursosData from "./Recursos/datos/recursosData";
 
-import CategoriaButton from "./componentsrecursos/CategoriaButton";
-import RecursoItem from "./componentsrecursos/RecursoItem";
-import RecursoDestacado from "./componentsrecursos/RecursoDestacado";
-import SolicitudCard from "./componentsrecursos/SolicitudCard";
+
+import CategoriaButton from "./Recursos/components/CategoriaButton";
+import RecursoItem from "./Recursos/components/RecursoItem";
+import RecursoDestacado from "./Recursos/components/RecursoDestacado";
+import SolicitudCard from "./Recursos/components/SolicitudCard";
 
 export default function Recursos() {
   const [categoria, setCategoria] = useState("todos");
