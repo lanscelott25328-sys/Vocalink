@@ -4,7 +4,8 @@ import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import "./App.css";
 
-import Inicio from "./components/Inicio";
+
+import Inicio from "./components/inicio/Inicio";
 import Historial from "./components/Historial/Historial";
 import Comunidad from "./components/Comunidad/Comunidad";
 import Recursos from "./components/Comunidad/Recursos";
