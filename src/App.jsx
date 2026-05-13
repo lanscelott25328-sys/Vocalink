@@ -4,8 +4,7 @@ import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "./firebase";
 import "./App.css";
 
-
-import Inicio from "./components/inicio/Inicio";
+import Inicio from "./components/Inicio/Inicio";
 import Historial from "./components/Historial/Historial";
 import Comunidad from "./components/Comunidad/Comunidad";
 import Recursos from "./components/Comunidad/Recursos";
@@ -20,18 +19,15 @@ import MenuLateral from "./components/MenuLateral/MenuLateral";
 export default function App() {
   const [usuario, setUsuario] = useState(null);
   const [cargando, setCargando] = useState(true);
-
   const [pantallaAuth, setPantallaAuth] = useState("login");
   const [pantallaApp, setPantallaApp] = useState("inicio");
   const [perfilCompleto, setPerfilCompleto] = useState(false);
-
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [seccionMenu, setSeccionMenu] = useState(null);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUsuario(user);
-
       if (user) {
         try {
           const docRef = doc(db, "usuarios", user.uid);
@@ -44,10 +40,8 @@ export default function App() {
       } else {
         setPerfilCompleto(false);
       }
-
       setCargando(false);
     });
-
     return () => unsubscribe();
   }, []);
 
@@ -82,11 +76,9 @@ export default function App() {
               onGoToRecuperar={() => setPantallaAuth("recuperar")}
             />
           )}
-
           {pantallaAuth === "registro" && (
             <Registro onGoToLogin={() => setPantallaAuth("login")} />
           )}
-
           {pantallaAuth === "recuperar" && (
             <Recuperar onGoToLogin={() => setPantallaAuth("login")} />
           )}
@@ -119,6 +111,8 @@ export default function App() {
           >
             ☰
           </button>
+          <span className="top-bar-title">Vocalink</span>
+          <div style={{ width: 42 }} />
         </div>
 
         <MenuLateral
@@ -138,33 +132,10 @@ export default function App() {
         </div>
 
         <div className="bottom-navbar">
-          <NavButton
-            icon="🏠"
-            label="Inicio"
-            active={pantallaApp === "inicio"}
-            onClick={() => setPantallaApp("inicio")}
-          />
-
-          <NavButton
-            icon="🕘"
-            label="Historial"
-            active={pantallaApp === "historial"}
-            onClick={() => setPantallaApp("historial")}
-          />
-
-          <NavButton
-            icon="👥"
-            label="Comunidad"
-            active={pantallaApp === "comunidad"}
-            onClick={() => setPantallaApp("comunidad")}
-          />
-
-          <NavButton
-            icon="📚"
-            label="Recursos"
-            active={pantallaApp === "recursos"}
-            onClick={() => setPantallaApp("recursos")}
-          />
+          <NavButton icon="🏠" label="Inicio" active={pantallaApp === "inicio"} onClick={() => setPantallaApp("inicio")} />
+          <NavButton icon="🕘" label="Historial" active={pantallaApp === "historial"} onClick={() => setPantallaApp("historial")} />
+          <NavButton icon="👥" label="Comunidad" active={pantallaApp === "comunidad"} onClick={() => setPantallaApp("comunidad")} />
+          <NavButton icon="📚" label="Recursos" active={pantallaApp === "recursos"} onClick={() => setPantallaApp("recursos")} />
         </div>
       </div>
     </div>

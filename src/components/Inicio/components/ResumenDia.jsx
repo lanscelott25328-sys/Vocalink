@@ -1,77 +1,69 @@
 export default function ResumenDia({ registros = [] }) {
+  const hoy = new Date();
+  const mes = hoy.toLocaleDateString("es-ES", { month: "long" });
+  const fechaTexto = `Hoy, ${hoy.getDate()} de ${mes}`;
+
   const total = registros.length;
-
-  const alertas = registros.filter((item) =>
-    ["sad", "triste", "fear", "miedo", "angry", "enojo", "disgust"].includes(
-      item.emotion?.toLowerCase()
-    )
+  const positivos = registros.filter((r) =>
+    ["happy", "feliz", "calm", "calma", "tranquilo"].includes(r.emotion?.toLowerCase())
   ).length;
-
-  const positivos = registros.filter((item) =>
-    ["happy", "feliz", "calm", "calma", "neutral"].includes(
-      item.emotion?.toLowerCase()
-    )
+  const neutros = registros.filter((r) =>
+    ["neutral", "neutro"].includes(r.emotion?.toLowerCase())
+  ).length;
+  const alertas = registros.filter((r) =>
+    ["sad", "triste", "fear", "miedo", "angry", "enojo", "disgust", "inquieto"].includes(r.emotion?.toLowerCase())
   ).length;
 
   return (
-    <div
-      style={{
-        background: "#FFFFFF",
-        borderRadius: 24,
-        padding: 20,
-        marginBottom: 20,
-        border: "1px solid #EEE6FA",
-        boxShadow: "0 8px 24px rgba(125,115,230,0.08)",
-      }}
-    >
-      <h3 style={{ margin: "0 0 16px", color: "#24325C" }}>
-        Resumen del día
-      </h3>
+    <div style={{ marginBottom: 20 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+        <h3 style={{ margin: 0, color: "#1E2B54", fontSize: 18, fontWeight: 800 }}>
+          Resumen del día
+        </h3>
+        <div
+          style={{
+            display: "flex", alignItems: "center", gap: 6,
+            background: "#FFFFFF", border: "1px solid #EEE6FA",
+            borderRadius: 20, padding: "6px 12px", fontSize: 12, color: "#6B7280",
+          }}
+        >
+          📅 {fechaTexto}
+        </div>
+      </div>
 
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(3, 1fr)",
-          gap: 12,
-        }}
-      >
-        <Card numero={total} texto="Registros" />
-        <Card numero={positivos} texto="Estables" />
-        <Card numero={alertas} texto="Alertas" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+        <StatCard icon={<WaveIcon />} iconBg="#E0F7F6" numero={total} texto="Voces analizadas" subtexto="Hoy" />
+        <StatCard icon="😊" iconBg="#E8F8ED" numero={positivos} texto="Momentos positivos" />
+        <StatCard icon="😐" iconBg="#FFF8E8" numero={neutros} texto="Momentos neutros" />
+        <StatCard icon="😟" iconBg="#FFE9E9" numero={alertas} texto="Momento de estrés" />
       </div>
     </div>
   );
 }
 
-function Card({ numero, texto }) {
+function StatCard({ icon, iconBg, numero, texto, subtexto }) {
   return (
-    <div
-      style={{
-        background: "#F8F4FF",
-        borderRadius: 18,
-        padding: 14,
-        textAlign: "center",
-      }}
-    >
+    <div style={{ background: "#FFFFFF", borderRadius: 18, padding: "12px 10px", border: "1px solid #F0EDF8" }}>
       <div
         style={{
-          color: "#7D73E6",
-          fontSize: 24,
-          fontWeight: 900,
+          width: 38, height: 38, borderRadius: 12, background: iconBg,
+          display: "flex", alignItems: "center", justifyContent: "center",
+          fontSize: 18, marginBottom: 8,
         }}
       >
-        {numero}
+        {icon}
       </div>
-
-      <div
-        style={{
-          color: "#6B7280",
-          fontSize: 12,
-          marginTop: 4,
-        }}
-      >
-        {texto}
-      </div>
+      <div style={{ color: "#1E2B54", fontSize: 22, fontWeight: 900, lineHeight: 1 }}>{numero}</div>
+      <div style={{ color: "#6B7280", fontSize: 11, marginTop: 4, lineHeight: 1.3 }}>{texto}</div>
+      {subtexto && <div style={{ color: "#B0B9C8", fontSize: 10, marginTop: 2 }}>{subtexto}</div>}
     </div>
+  );
+}
+
+function WaveIcon() {
+  return (
+    <svg width="20" height="16" viewBox="0 0 20 16" fill="none">
+      <path d="M1 8 Q3 4 5 8 Q7 12 9 8 Q11 4 13 8 Q15 12 17 8 Q19 4 20 8" stroke="#4ECDC4" strokeWidth="2" strokeLinecap="round" fill="none" />
+    </svg>
   );
 }
