@@ -1,5 +1,5 @@
 export function clasificarEmocion(emotion = "") {
-  const e = emotion.toLowerCase();
+  const e = (emotion ?? "").toLowerCase();
 
   if (["happy", "feliz", "calm", "calma", "tranquilo"].includes(e)) {
     return { categoria: "Positivo", emoji: "😊", mensaje: "se siente tranquilo", color: "#7B6FCC", bgColor: "#EDEAFF" };

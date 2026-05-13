@@ -1,21 +1,40 @@
 import { useState } from "react";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "../../../firebase";
 
-export default function RegistrarActividad() {
+export default function RegistrarActividad({ prediccion }) {
   const [actividad, setActividad] = useState("");
   const [abierto, setAbierto] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
-  function guardarActividad() {
+  async function guardarActividad() {
     if (!actividad.trim()) return;
-    console.log("Actividad registrada:", actividad);
-    setActividad("");
-    setAbierto(false);
+
+    setGuardando(true);
+    try {
+      await addDoc(collection(db, "predicciones"), {
+        emotion: prediccion?.emotion ?? null,
+        actividad: actividad.trim(),
+        createdAt: serverTimestamp(),
+        uid: auth.currentUser?.uid,
+      });
+      setActividad("");
+      setAbierto(false);
+    } catch (error) {
+      console.error("Error guardando actividad:", error);
+    } finally {
+      setGuardando(false);
+    }
   }
 
   return (
     <div
       style={{
-        background: "#FFFFFF", borderRadius: 24, padding: 18,
-        marginBottom: 20, border: "1px solid #EEE6FA",
+        background: "#FFFFFF",
+        borderRadius: 24,
+        padding: 18,
+        marginBottom: 20,
+        border: "1px solid #EEE6FA",
         boxShadow: "0 4px 16px rgba(125,115,230,0.07)",
       }}
     >
@@ -36,7 +55,9 @@ export default function RegistrarActividad() {
             Registrar actividad
           </div>
           <div style={{ color: "#6B7280", fontSize: 13, lineHeight: 1.4 }}>
-            Registra lo que está haciendo tu pequeño para asociarlo con sus emociones.
+            {prediccion?.emotion
+              ? `Se guardará con la emoción: ${prediccion.emotion}`
+              : "Registra lo que está haciendo tu pequeño."}
           </div>
         </div>
 
@@ -59,9 +80,21 @@ export default function RegistrarActividad() {
 
       {abierto && (
         <div style={{ marginTop: 16 }}>
+          {prediccion?.emotion && (
+            <div
+              style={{
+                background: "#F5F2FF", borderRadius: 12,
+                padding: "8px 14px", marginBottom: 10,
+                fontSize: 13, color: "#7D73E6", fontWeight: 600,
+              }}
+            >
+              Emoción actual: {prediccion.emotion}
+            </div>
+          )}
           <input
             value={actividad}
             onChange={(e) => setActividad(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && guardarActividad()}
             placeholder="Ej: jugando, comiendo, en clase..."
             style={{
               width: "100%", padding: "12px 14px", borderRadius: 14,
@@ -71,13 +104,15 @@ export default function RegistrarActividad() {
           />
           <button
             onClick={guardarActividad}
+            disabled={guardando}
             style={{
               width: "100%", border: "none", borderRadius: 14, padding: "12px",
-              background: "linear-gradient(135deg, #B79CF7 0%, #7FA8F8 100%)",
-              color: "#FFFFFF", fontWeight: 700, fontSize: 15, cursor: "pointer",
+              background: guardando ? "#C8C2E8" : "linear-gradient(135deg, #B79CF7 0%, #7FA8F8 100%)",
+              color: "#FFFFFF", fontWeight: 700, fontSize: 15,
+              cursor: guardando ? "not-allowed" : "pointer",
             }}
           >
-            Guardar actividad
+            {guardando ? "Guardando..." : "Guardar actividad"}
           </button>
         </div>
       )}
