@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { auth, db } from "../../firebase";
+import { FaceIcon } from "../shared/FaceIcon";
 
 function TrendIcon() {
   return (
@@ -15,28 +16,29 @@ function TrendIcon() {
 function emotionMeta(rawEmotion) {
   const e = String(rawEmotion ?? "").toLowerCase().trim();
   const map = {
-    happy:       { label: "Feliz",      emoji: "😊", color: "#43B39B", soft: "#E7F7F2", pillText: "#2F8A76", recommendation: "¡Excelente! Tu pequeño está contento. Refuerza este momento positivo con juego o afecto." },
-    feliz:       { label: "Feliz",      emoji: "😊", color: "#43B39B", soft: "#E7F7F2", pillText: "#2F8A76", recommendation: "¡Excelente! Tu pequeño está contento. Refuerza este momento positivo con juego o afecto." },
-    calm:        { label: "Calma",      emoji: "😌", color: "#5ECFCB", soft: "#E0F7F6", pillText: "#2F8A76", recommendation: "Excelente momento de bienestar. Aprovecha para reforzar hábitos y rutinas positivas." },
-    calma:       { label: "Calma",      emoji: "😌", color: "#5ECFCB", soft: "#E0F7F6", pillText: "#2F8A76", recommendation: "Excelente momento de bienestar. Aprovecha para reforzar hábitos y rutinas positivas." },
-    tranquilo:   { label: "Tranquilo",  emoji: "😌", color: "#5ECFCB", soft: "#E0F7F6", pillText: "#2F8A76", recommendation: "Tu pequeño está sereno. Es un buen momento para actividades creativas o de aprendizaje." },
-    neutral:     { label: "Neutral",    emoji: "😐", color: "#8E80F7", soft: "#F2EEFF", pillText: "#6D5DE0", recommendation: "Estado estable. Mantén la observación del contexto y la rutina habitual." },
-    neutro:      { label: "Neutral",    emoji: "😐", color: "#8E80F7", soft: "#F2EEFF", pillText: "#6D5DE0", recommendation: "Estado estable. Mantén la observación del contexto y la rutina habitual." },
-    sad:         { label: "Triste",     emoji: "😢", color: "#7BA8D4", soft: "#DCE8F8", pillText: "#4A6FA8", recommendation: "Favorece la contención emocional. Acompaña con actividades tranquilas y mucho afecto." },
-    triste:      { label: "Triste",     emoji: "😢", color: "#7BA8D4", soft: "#DCE8F8", pillText: "#4A6FA8", recommendation: "Favorece la contención emocional. Acompaña con actividades tranquilas y mucho afecto." },
-    fear:        { label: "Miedo",      emoji: "😨", color: "#8FB3FF", soft: "#EDF4FF", pillText: "#547FD9", recommendation: "Brinda seguridad y reduce estímulos intensos. Valida la emoción con voz tranquilizadora." },
-    miedo:       { label: "Miedo",      emoji: "😨", color: "#8FB3FF", soft: "#EDF4FF", pillText: "#547FD9", recommendation: "Brinda seguridad y reduce estímulos intensos. Valida la emoción con voz tranquilizadora." },
-    angry:       { label: "Enojo",      emoji: "😠", color: "#F4906A", soft: "#FFE0D4", pillText: "#C05030", recommendation: "Mantén la calma. Ofrece un espacio seguro y espera a que tu pequeño se autorregule." },
-    enojo:       { label: "Enojo",      emoji: "😠", color: "#F4906A", soft: "#FFE0D4", pillText: "#C05030", recommendation: "Mantén la calma. Ofrece un espacio seguro y espera a que tu pequeño se autorregule." },
-    disgust:     { label: "Malestar",   emoji: "😣", color: "#D4A44C", soft: "#FFF0D4", pillText: "#A07820", recommendation: "Revisa posibles fuentes de incomodidad física o ambiental y acompaña con calma." },
-    inquieto:    { label: "Inquieto",   emoji: "😟", color: "#F0A060", soft: "#FFE8D4", pillText: "#C07030", recommendation: "Tu pequeño está inquieto. Acércate, ofrece contacto físico y voz tranquilizadora." },
-    surprised:   { label: "Sorpresa",   emoji: "😮", color: "#F4C44C", soft: "#FFF4CC", pillText: "#B08800", recommendation: "Observa si la respuesta se estabiliza y acompaña con indicaciones suaves y claras." },
-    sorpresa:    { label: "Sorpresa",   emoji: "😮", color: "#F4C44C", soft: "#FFF4CC", pillText: "#B08800", recommendation: "Observa si la respuesta se estabiliza y acompaña con indicaciones suaves y claras." },
-    sorprendido: { label: "Sorpresa",   emoji: "😮", color: "#F4C44C", soft: "#FFF4CC", pillText: "#B08800", recommendation: "Observa si la respuesta se estabiliza y acompaña con indicaciones suaves y claras." },
+    happy:       { label: "Feliz",      rawEmotion: "happy",     color: "#43B39B", soft: "#E7F7F2", pillText: "#2F8A76", recommendation: "¡Excelente! Tu pequeño está contento. Refuerza este momento positivo con juego o afecto." },
+    feliz:       { label: "Feliz",      rawEmotion: "happy",     color: "#43B39B", soft: "#E7F7F2", pillText: "#2F8A76", recommendation: "¡Excelente! Tu pequeño está contento. Refuerza este momento positivo con juego o afecto." },
+    calm:        { label: "Calma",      rawEmotion: "calm",      color: "#5ECFCB", soft: "#E0F7F6", pillText: "#2F8A76", recommendation: "Excelente momento de bienestar. Aprovecha para reforzar hábitos y rutinas positivas." },
+    calma:       { label: "Calma",      rawEmotion: "calm",      color: "#5ECFCB", soft: "#E0F7F6", pillText: "#2F8A76", recommendation: "Excelente momento de bienestar. Aprovecha para reforzar hábitos y rutinas positivas." },
+    tranquilo:   { label: "Tranquilo",  rawEmotion: "tranquilo", color: "#5ECFCB", soft: "#E0F7F6", pillText: "#2F8A76", recommendation: "Tu pequeño está sereno. Es un buen momento para actividades creativas o de aprendizaje." },
+    neutral:     { label: "Neutral",    rawEmotion: "neutral",   color: "#8E80F7", soft: "#F2EEFF", pillText: "#6D5DE0", recommendation: "Estado estable. Mantén la observación del contexto y la rutina habitual." },
+    neutro:      { label: "Neutral",    rawEmotion: "neutral",   color: "#8E80F7", soft: "#F2EEFF", pillText: "#6D5DE0", recommendation: "Estado estable. Mantén la observación del contexto y la rutina habitual." },
+    sad:         { label: "Triste",     rawEmotion: "sad",       color: "#7BA8D4", soft: "#DCE8F8", pillText: "#4A6FA8", recommendation: "Favorece la contención emocional. Acompaña con actividades tranquilas y mucho afecto." },
+    triste:      { label: "Triste",     rawEmotion: "sad",       color: "#7BA8D4", soft: "#DCE8F8", pillText: "#4A6FA8", recommendation: "Favorece la contención emocional. Acompaña con actividades tranquilas y mucho afecto." },
+    fear:        { label: "Miedo",      rawEmotion: "fear",      color: "#8FB3FF", soft: "#EDF4FF", pillText: "#547FD9", recommendation: "Brinda seguridad y reduce estímulos intensos. Valida la emoción con voz tranquilizadora." },
+    miedo:       { label: "Miedo",      rawEmotion: "fear",      color: "#8FB3FF", soft: "#EDF4FF", pillText: "#547FD9", recommendation: "Brinda seguridad y reduce estímulos intensos. Valida la emoción con voz tranquilizadora." },
+    angry:       { label: "Enojo",      rawEmotion: "angry",     color: "#F4906A", soft: "#FFE0D4", pillText: "#C05030", recommendation: "Mantén la calma. Ofrece un espacio seguro y espera a que tu pequeño se autorregule." },
+    enojo:       { label: "Enojo",      rawEmotion: "angry",     color: "#F4906A", soft: "#FFE0D4", pillText: "#C05030", recommendation: "Mantén la calma. Ofrece un espacio seguro y espera a que tu pequeño se autorregule." },
+    disgust:     { label: "Malestar",   rawEmotion: "disgust",   color: "#D4A44C", soft: "#FFF0D4", pillText: "#A07820", recommendation: "Revisa posibles fuentes de incomodidad física o ambiental y acompaña con calma." },
+    inquieto:    { label: "Inquieto",   rawEmotion: "inquieto",  color: "#F0A060", soft: "#FFE8D4", pillText: "#C07030", recommendation: "Tu pequeño está inquieto. Acércate, ofrece contacto físico y voz tranquilizadora." },
+    surprised:   { label: "Sorpresa",   rawEmotion: "surprised", color: "#F4C44C", soft: "#FFF4CC", pillText: "#B08800", recommendation: "Observa si la respuesta se estabiliza y acompaña con indicaciones suaves y claras." },
+    sorpresa:    { label: "Sorpresa",   rawEmotion: "surprised", color: "#F4C44C", soft: "#FFF4CC", pillText: "#B08800", recommendation: "Observa si la respuesta se estabiliza y acompaña con indicaciones suaves y claras." },
+    sorprendido: { label: "Sorpresa",   rawEmotion: "surprised", color: "#F4C44C", soft: "#FFF4CC", pillText: "#B08800", recommendation: "Observa si la respuesta se estabiliza y acompaña con indicaciones suaves y claras." },
   };
   return map[e] || {
     label: rawEmotion ? String(rawEmotion) : "No identificada",
-    emoji: "🫤", color: "#B9B9C8", soft: "#F3F3F8", pillText: "#7A7A89",
+    rawEmotion: rawEmotion || "neutral",
+    color: "#B9B9C8", soft: "#F3F3F8", pillText: "#7A7A89",
     recommendation: "Continúa observando el contexto y revisa más registros para interpretar el patrón emocional.",
   };
 }
@@ -74,14 +76,9 @@ export default function Historial() {
   useEffect(() => {
     const usuario = auth.currentUser;
     if (!usuario) return;
-    const q = query(
-      collection(db, "predicciones"),
-      where("uid", "==", usuario.uid),
-      orderBy("createdAt", "desc")
-    );
+    const q = query(collection(db, "predicciones"), where("uid", "==", usuario.uid), orderBy("createdAt", "desc"));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const datos = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-      setRegistros(datos);
+      setRegistros(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
     });
     return () => unsubscribe();
   }, []);
@@ -147,20 +144,13 @@ export default function Historial() {
     const meta = emotionMeta(detalle.emotion);
     return (
       <div style={{ padding: "18px 16px 100px", background: "#FAFBFF", minHeight: "100vh" }}>
-        <button
-          onClick={() => setDetalle(null)}
-          style={{
-            display: "flex", alignItems: "center", gap: 8,
-            background: "none", border: "none", cursor: "pointer",
-            color: "#7D73E6", fontWeight: 700, fontSize: 15, marginBottom: 20, padding: 0,
-          }}
-        >
+        <button onClick={() => setDetalle(null)} style={{ display: "flex", alignItems: "center", gap: 8, background: "none", border: "none", cursor: "pointer", color: "#7D73E6", fontWeight: 700, fontSize: 15, marginBottom: 20, padding: 0 }}>
           ← Volver al historial
         </button>
 
         <div style={{ background: meta.soft, borderRadius: 28, padding: 24, display: "flex", gap: 18, alignItems: "center", marginBottom: 18, border: `1.5px solid ${meta.color}33` }}>
-          <div style={{ width: 80, height: 80, borderRadius: "50%", background: "#FFFFFF", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 42, flexShrink: 0, border: `2px solid ${meta.color}44` }}>
-            {meta.emoji}
+          <div style={{ flexShrink: 0 }}>
+            <FaceIcon emotion={detalle.emotion} size={80} />
           </div>
           <div>
             <div style={{ fontSize: 11, color: meta.pillText, fontWeight: 800, textTransform: "uppercase", letterSpacing: 1, marginBottom: 4 }}>Estado emocional</div>
@@ -193,25 +183,10 @@ export default function Historial() {
 
       <div style={{ background: "#FFFFFF", border: "1px solid #EEE7FA", borderRadius: 20, padding: 8, display: "flex", gap: 6, overflowX: "auto", marginBottom: 18 }}>
         {[
-          { key: "todos", label: "Todos" },
-          { key: "hoy", label: "Hoy" },
-          { key: "ayer", label: "Ayer" },
-          { key: "7dias", label: "7 días" },
-          { key: "30dias", label: "30 días" },
-          { key: "personalizado", label: "Personalizado" },
+          { key: "todos", label: "Todos" }, { key: "hoy", label: "Hoy" }, { key: "ayer", label: "Ayer" },
+          { key: "7dias", label: "7 días" }, { key: "30dias", label: "30 días" }, { key: "personalizado", label: "Personalizado" },
         ].map((f) => (
-          <button
-            key={f.key}
-            onClick={() => setFiltro(f.key)}
-            style={{
-              border: "none",
-              background: filtro === f.key ? "#F1ECFF" : "transparent",
-              color: filtro === f.key ? "#7D73E6" : "#6F7897",
-              fontWeight: filtro === f.key ? 800 : 600,
-              borderRadius: 16, padding: "10px 14px",
-              whiteSpace: "nowrap", cursor: "pointer", fontSize: 13,
-            }}
-          >
+          <button key={f.key} onClick={() => setFiltro(f.key)} style={{ border: "none", background: filtro === f.key ? "#F1ECFF" : "transparent", color: filtro === f.key ? "#7D73E6" : "#6F7897", fontWeight: filtro === f.key ? 800 : 600, borderRadius: 16, padding: "10px 14px", whiteSpace: "nowrap", cursor: "pointer", fontSize: 13 }}>
             {f.label}
           </button>
         ))}
@@ -219,10 +194,8 @@ export default function Historial() {
 
       {filtro === "personalizado" && (
         <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
-          <input type="date" value={fechaInicioCustom} onChange={(e) => setFechaInicioCustom(e.target.value)}
-            style={{ flex: 1, border: "1px solid #E3D8F5", borderRadius: 14, padding: 12, fontSize: 13 }} />
-          <input type="date" value={fechaFinCustom} onChange={(e) => setFechaFinCustom(e.target.value)}
-            style={{ flex: 1, border: "1px solid #E3D8F5", borderRadius: 14, padding: 12, fontSize: 13 }} />
+          <input type="date" value={fechaInicioCustom} onChange={(e) => setFechaInicioCustom(e.target.value)} style={{ flex: 1, border: "1px solid #E3D8F5", borderRadius: 14, padding: 12, fontSize: 13 }} />
+          <input type="date" value={fechaFinCustom} onChange={(e) => setFechaFinCustom(e.target.value)} style={{ flex: 1, border: "1px solid #E3D8F5", borderRadius: 14, padding: 12, fontSize: 13 }} />
         </div>
       )}
 
@@ -245,8 +218,8 @@ export default function Historial() {
           <div style={{ fontSize: 13, color: "#8A8FA8", textAlign: "center" }}>Aún no hay datos para este periodo.</div>
         ) : (
           resumen.items.slice(0, 5).map((item) => (
-            <div key={item.label} style={{ display: "grid", gridTemplateColumns: "28px 1fr 30px 38px", alignItems: "center", gap: 10, marginBottom: 12 }}>
-              <div style={{ fontSize: 22 }}>{item.emoji}</div>
+            <div key={item.label} style={{ display: "grid", gridTemplateColumns: "32px 1fr 30px 38px", alignItems: "center", gap: 10, marginBottom: 12 }}>
+              <FaceIcon emotion={item.rawEmotion} size={28} />
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#24325C", marginBottom: 4 }}>{item.label}</div>
                 <div style={{ height: 5, borderRadius: 999, background: "#F0EEF7", overflow: "hidden" }}>
@@ -260,7 +233,9 @@ export default function Historial() {
         )}
 
         <div style={{ marginTop: 16, background: "#F8F4FF", borderRadius: 18, padding: 16, display: "flex", alignItems: "center", gap: 14 }}>
-          <div style={{ fontSize: 44, flexShrink: 0 }}>{tendencia ? tendencia.emoji : "🫧"}</div>
+          <div style={{ flexShrink: 0 }}>
+            <FaceIcon emotion={tendencia ? tendencia.rawEmotion : "neutral"} size={52} />
+          </div>
           <div>
             <div style={{ display: "flex", alignItems: "center", gap: 6, color: "#7D73E6", fontWeight: 800, fontSize: 13, marginBottom: 4 }}>
               <TrendIcon /> Tendencia general
@@ -270,7 +245,7 @@ export default function Historial() {
             </div>
             <div style={{ fontSize: 13, color: "#7D73E6", fontWeight: 700, marginTop: 2 }}>
               {tendencia
-                ? ["Calma", "Feliz", "Tranquilo"].includes(tendencia.label) ? "¡Buen trabajo! 🌟" : "Sigue observando el contexto"
+                ? ["Calma", "Feliz", "Tranquilo"].includes(tendencia.label) ? "¡Buen trabajo!" : "Sigue observando el contexto"
                 : "Analiza más audios"}
             </div>
           </div>
@@ -288,26 +263,16 @@ export default function Historial() {
         registrosFiltrados.map((item) => {
           const meta = emotionMeta(item.emotion);
           return (
-            <button
-              key={item.id}
-              onClick={() => setDetalle(item)}
-              style={{
-                width: "100%", textAlign: "left",
-                background: "#FFFFFF", border: "1px solid #EEE7FA",
-                borderRadius: 18, padding: "14px 16px", marginBottom: 10,
-                boxShadow: "0 2px 8px rgba(155,132,192,0.07)",
-                cursor: "pointer", display: "flex", alignItems: "center", gap: 14,
-              }}
-            >
-              <div style={{ width: 48, height: 48, borderRadius: "50%", background: meta.soft, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 26, border: `1.5px solid ${meta.color}33` }}>
-                {meta.emoji}
+            <button key={item.id} onClick={() => setDetalle(item)} style={{ width: "100%", textAlign: "left", background: "#FFFFFF", border: "1px solid #EEE7FA", borderRadius: 18, padding: "14px 16px", marginBottom: 10, boxShadow: "0 2px 8px rgba(155,132,192,0.07)", cursor: "pointer", display: "flex", alignItems: "center", gap: 14 }}>
+              <div style={{ flexShrink: 0 }}>
+                <FaceIcon emotion={item.emotion} size={48} />
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
                   <div style={{ fontSize: 15, fontWeight: 800, color: "#24325C" }}>{meta.label}</div>
                   {item.actividad && (
                     <div style={{ fontSize: 11, color: "#43B39B", fontWeight: 700, background: "#F0FBF7", borderRadius: 8, padding: "2px 8px" }}>
-                      📋 {item.actividad}
+                      {item.actividad}
                     </div>
                   )}
                 </div>

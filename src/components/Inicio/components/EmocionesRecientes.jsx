@@ -1,12 +1,11 @@
 import { clasificarEmocion } from "../utils/clasificarEmocion";
+import { FaceIcon } from "../../shared/FaceIcon";
 
 export default function EmocionesRecientes({ registros }) {
   return (
     <div>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
-        <h3 style={{ margin: 0, color: "#1E2B54", fontSize: 18, fontWeight: 800 }}>
-          Emociones recientes
-        </h3>
+        <h3 style={{ margin: 0, color: "#1E2B54", fontSize: 18, fontWeight: 800 }}>Emociones recientes</h3>
         <span style={{ color: "#7D73E6", fontWeight: 700, fontSize: 14, display: "flex", alignItems: "center", gap: 2 }}>
           Ver todas <span style={{ fontSize: 18, lineHeight: 1 }}>›</span>
         </span>
@@ -36,32 +35,24 @@ export default function EmocionesRecientes({ registros }) {
             return (
               <div
                 key={item.id}
-                style={{
-                  display: "flex", alignItems: "center", gap: 12, padding: "14px 0",
-                  borderBottom: index < registros.length - 1 ? "1px solid #F3EEFF" : "none",
-                }}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 0", borderBottom: index < registros.length - 1 ? "1px solid #F3EEFF" : "none" }}
               >
-                <div
-                  style={{
-                    width: 46, height: 46, borderRadius: "50%", background: info.bgColor,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 22, flexShrink: 0,
-                  }}
-                >
-                  {info.emoji}
+                <div style={{ flexShrink: 0 }}>
+                  <FaceIcon emotion={item.emotion} size={46} />
                 </div>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ color: info.color, fontWeight: 700, fontSize: 15 }}>{nombreEmocion}</div>
-                  {tiempoTexto && <div style={{ color: "#B0B9C8", fontSize: 12, marginTop: 2 }}>{tiempoTexto}</div>}
+                  {tiempoTexto && (
+                    <div style={{ color: "#B0B9C8", fontSize: 12, marginTop: 2 }}>{tiempoTexto}</div>
+                  )}
                 </div>
 
                 {item.actividad && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
-                    <span style={{ fontSize: 14, color: "#A48FD6" }}>📅</span>
-                    <div>
-                      <div style={{ color: "#9CA3AF", fontSize: 11 }}>Actividad:</div>
-                      <div style={{ color: "#4B5563", fontSize: 13, fontWeight: 600 }}>{item.actividad}</div>
+                  <div style={{ flexShrink: 0, maxWidth: 90 }}>
+                    <div style={{ color: "#9CA3AF", fontSize: 11 }}>Actividad</div>
+                    <div style={{ color: "#4B5563", fontSize: 12, fontWeight: 600, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {item.actividad}
                     </div>
                   </div>
                 )}

@@ -135,7 +135,6 @@ export default function App() {
           <NavButton icon="🏠" label="Inicio" active={pantallaApp === "inicio"} onClick={() => setPantallaApp("inicio")} />
           <NavButton icon="🕘" label="Historial" active={pantallaApp === "historial"} onClick={() => setPantallaApp("historial")} />
           <NavButton icon="👥" label="Comunidad" active={pantallaApp === "comunidad"} onClick={() => setPantallaApp("comunidad")} />
-          <NavButton icon="📚" label="Recursos" active={pantallaApp === "recursos"} onClick={() => setPantallaApp("recursos")} />
         </div>
       </div>
     </div>

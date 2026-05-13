@@ -179,9 +179,11 @@ select:focus {
 
 .app-phone {
   position: relative;
-  min-height: 760px;
+  height: 760px;
+  max-height: calc(500svh - 48px);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .top-menu-bar {
